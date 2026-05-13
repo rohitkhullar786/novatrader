@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Tab slide animation */
+.tab-content {
+  animation: fadeIn 0.2s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Invisible scrollbar - scrollable but no scrollbar visible */
+.invisible-scroll {
+  overflow-y: auto;
+  scrollbar-width: none; /* Firefox - hide scrollbar */
+  -ms-overflow-style: none; /* IE/Edge - hide scrollbar */
+  -webkit-overflow-scrolling: touch; /* Smooth touch scrolling */
+}
+
+.invisible-scroll::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Opera - hide scrollbar */
+}
