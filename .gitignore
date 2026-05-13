@@ -10,3 +10,4 @@ venv_new/
 nohup.out
 storage.json
 .vite/
+*.bak

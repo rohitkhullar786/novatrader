@@ -4,7 +4,7 @@ import MainChartCard from "../components/MainChartCard"
 import RightPanel from "../components/RightPanel"
 import DecisionCard from "../components/DecisionCard"
 import MobileNav from "../components/MobileNav"
-import { getBalance, getHtxBalance, getPositions, startAutoRun, forceTrade } from "../services/api"
+import { getBalance, getHtxBalance, getPositions, startAutoRun } from "../services/api"
 
 export default function Dashboard(){
 
@@ -12,9 +12,7 @@ const [decision, setDecision] = useState(null)
 const [balance, setBalance] = useState({V1: 10000, V2: 10000})
 const [htxBalance, setHtxBalance] = useState({USDD: 0, BTC: 0, total: 0})
 const [totalValue, setTotalValue] = useState(10000)
-const [manualTrade, setManualTrade] = useState(false)
-const [tradeDirection, setTradeDirection] = useState("BUY")
-const [tradeMsg, setTradeMsg] = useState("")
+
 const [activeMobileTab, setActiveMobileTab] = useState("home")
 const [menuOpen, setMenuOpen] = useState(false)
 
@@ -37,28 +35,6 @@ async function fetchData() {
   } catch (e) {
     console.error("Error fetching data:", e)
   }
-}
-
-async function handleManualTrade() {
-  setManualTrade(true)
-  setTradeMsg("")
-}
-
-async function executeTrade() {
-  try {
-    setTradeMsg("Executing trade...")
-    const result = await forceTrade(null, tradeDirection)
-    if (result.success) {
-      const strat = result.strategy ? ` (${result.strategy === 'V1' ? 'NT' : 'NR'})` : ''
-      setTradeMsg(`${tradeDirection} executed${strat}! Price: $${result.trade.entry_price}`)
-      fetchData()
-    } else {
-      setTradeMsg(result.message || "Trade failed")
-    }
-  } catch (e) {
-    setTradeMsg("Trade error: " + e.message)
-  }
-  setTimeout(() => setManualTrade(false), 2000)
 }
 
 function handleMobileTabChange(tab) {
@@ -144,7 +120,7 @@ return (
             <div className="text-xs md:text-sm font-medium">
               Balance: <span className="font-semibold">${(htxBalance.total ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
             </div>
-            <button onClick={handleManualTrade} className="bg-[#111] text-white text-xs md:text-sm px-3 md:px-4 py-2 rounded-lg hover:bg-[#333] transition-colors hidden md:inline-block">Manual Trade</button>
+
           </div>
         </div>
         <div className="grid grid-cols-[1fr_500px] gap-6">
@@ -157,31 +133,7 @@ return (
         </div>
       </div>
 
-      {/* MANUAL TRADE MODAL */}
-      {manualTrade && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-[360px] shadow-xl">
-            <h3 className="text-lg font-semibold mb-4">Manual Trade</h3>
-            <p className="text-xs text-gray-500 mb-4">Auto-selects strategy with highest confidence for position sizing</p>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm text-gray-600 mb-1 block">Direction</label>
-                <select value={tradeDirection} onChange={e => setTradeDirection(e.target.value)} className="w-full border rounded-lg px-3 py-2">
-                  <option value="BUY">BUY</option>
-                  <option value="SELL">SELL</option>
-                </select>
-              </div>
-              {tradeMsg && (
-                <div className="text-sm text-center py-2 bg-gray-100 rounded-lg">{tradeMsg}</div>
-              )}
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button onClick={() => setManualTrade(false)} className="flex-1 border py-2 rounded-lg hover:bg-gray-50">Cancel</button>
-              <button onClick={executeTrade} className="flex-1 bg-[#111] text-white py-2 rounded-lg hover:bg-[#333]">Execute</button>
-            </div>
-          </div>
-        </div>
-      )}
+
 
     </div>
   </div>

@@ -6,7 +6,7 @@ export default defineConfig({
   server: {
     port: 5180,
     host: '0.0.0.0',
-    allowedHosts: ['linx.spotted-truck.ts.net', 'localhost', 'linx'],
+    allowedHosts: ['linx.spotted-truck.ts.net', 'localhost', 'linx', 'novatrader.rohitkhullar.com'],
     proxy: {
       '/api': {
         target: 'http://localhost:5181',

@@ -2,7 +2,6 @@ import { useState, useEffect } from "react"
 import TradeCard from "./TradeCard"
 import ReasoningCard from "./ReasoningCard"
 import PositionTable from "./PositionTable"
-import SignalDetailsCard from "./SignalDetailsCard"
 import HoldingsCard from "./HoldingsCard"
 
 export default function RightPanel(){
@@ -26,8 +25,8 @@ useEffect(() => {
 }, [])
 
 useEffect(() => {
-  // Poll positions every 5 seconds (always in background)
-  const positionsInterval = setInterval(fetchPositions, 5000)
+  // Poll positions every 30 seconds (for position status updates)
+  const positionsInterval = setInterval(fetchPositions, 30000)
   
   // Poll other data every 30 seconds
   const interval = setInterval(() => {
@@ -139,6 +138,12 @@ return(
 
     {/* Scrollable Reasoning Cards */}
     <div className="max-h-[600px] pr-1 invisible-scroll">
+      {/* Check if position is active */}
+      {positions.NOVA && positions.NOVA.some(p => p.coin !== 'USDD' && p.quantity > 0) && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-3 text-xs text-yellow-700">
+          ⏸ AI reasoning paused — position active. Resumes when position closes.
+        </div>
+      )}
       {filteredDecisions.length > 0 ? (
         filteredDecisions.map((dec, i) => <ReasoningCard key={i} decision={dec} />)
       ) : (
@@ -154,9 +159,6 @@ return(
   <div className="space-y-4">
     {/* Show both V1 and V2 positions stacked */}
     <PositionTable positions={positions.NOVA || []} version="NOVA" />
-    
-    {/* Signal Details Card - shows AI reasoning and entry point for active positions */}
-    <SignalDetailsCard />
   </div>
 )}
 

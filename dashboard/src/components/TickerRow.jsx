@@ -38,7 +38,7 @@ export default function TickerRow() {
   if (error) return <div className="p-4 text-red-500">Error: {error}</div>
 
   const pairs = [
-    { key: 'BTC/USDT', label: 'BTC' },
+    { key: 'BTC/USDT', label: 'BTC/USDT' },
     { key: 'TRX/USDT', label: 'TRX' },
     { key: 'BTC/USDD', label: 'BTC/USDD' }
   ]

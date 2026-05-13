@@ -301,6 +301,12 @@ MAX_DECISIONS = 100
 
 STORAGE_FILE = os.path.join(os.path.dirname(__file__), 'storage.json')
 
+def has_open_position():
+    """Check if NOVA has an active BTC/USDT position"""
+    nova = storage.get('NOVA', {})
+    pos = nova.get('positions', {}).get('BTC/USDT', {})
+    return pos.get('status') in ('open', 'pending')
+
 def save_storage():
     """Persist storage to disk"""
     try:
@@ -407,7 +413,7 @@ def fetch_htx_prices():
 
 def get_ai_reasoning(decision, prices, model=None):
     """Use AI to generate human-readable reasoning for the decision"""
-    btc_price = prices.get('BTC/USDT', {}).get('price', 0)
+    btc_price = prices.get('BTC/USDD', {}).get('price', 0)
     strategy = decision.get('strategy_version', 'V2')
     strategy_name = decision.get('strategy_name', 'Nova Range')
     regime = decision.get('market_regime', 'unknown')
@@ -445,7 +451,7 @@ def check_pending_orders():
         open_orders = htx_live.fetch_open_orders('BTC/USDD')
         open_order_ids = {str(o['id']): o for o in open_orders}
         
-        for version in ['V1', 'V2']:
+        for version in ['V1', 'V2', 'NOVA']:
             for symbol, pos in list(storage[version]['positions'].items()):
                 pending_id = pos.get('pending_order_id')
                 if pending_id and str(pending_id) in open_order_ids:
@@ -505,7 +511,7 @@ def check_pending_orders():
 def check_positions_for_stops(version, prices):
     """Check open positions for stop loss, take profit, or trailing stop hits"""
     s = storage[version]
-    btc_price = prices.get('BTC/USDT', {}).get('price', 0)
+    btc_price = prices.get('BTC/USDD', {}).get('price', 0)
     
     if btc_price == 0:
         return []
@@ -669,7 +675,7 @@ def check_positions_for_stops(version, prices):
 def execute_paper_trade(strategy_version, decision, prices):
     """Execute paper trade based on strategy decision with dynamic position sizing"""
     s = storage[strategy_version]
-    btc_price = prices.get('BTC/USDT', {}).get('price', 0)
+    btc_price = prices.get('BTC/USDD', {}).get('price', 0)
     
     if btc_price == 0:
         return None
@@ -918,7 +924,7 @@ def execute_paper_trade(strategy_version, decision, prices):
 def record_equity_snapshot(version, prices):
     """Record current equity for equity curve - uses LIVE HTX balance"""
     s = storage[version]
-    btc_price = prices.get('BTC/USDT', {}).get('price', 0)
+    btc_price = prices.get('BTC/USDD', {}).get('price', 0)
     
     unrealized_pnl = calculate_unrealized_pnl(s['positions'], btc_price)
     
@@ -951,7 +957,7 @@ def calculate_metrics(version):
     trades = [t for t in s['trades'] if t.get('status') == 'closed']
     
     prices = fetch_htx_prices()
-    btc_price = prices.get('BTC/USDT', {}).get('price', 0)
+    btc_price = prices.get('BTC/USDD', {}).get('price', 0)
     unrealized_pnl = calculate_unrealized_pnl(s['positions'], btc_price)
     
     # Use live HTX balance for equity
@@ -1030,7 +1036,7 @@ async def get_prices():
 async def get_balance():
     """Get account info for both strategies - uses LIVE HTX balance"""
     prices = fetch_htx_prices()
-    btc_price = prices.get('BTC/USDT', {}).get('price', 0)
+    btc_price = prices.get('BTC/USDD', {}).get('price', 0)
     
     # Get live HTX balance for both strategies
     live_bal = get_live_balance()
@@ -1067,7 +1073,7 @@ async def get_htx_balance():
         
         # Get BTC price for conversion
         prices = fetch_htx_prices()
-        btc_price = prices.get('BTC/USDT', {}).get('price', 0)
+        btc_price = prices.get('BTC/USDD', {}).get('price', 0)
         
         # Get all non-zero assets
         all_assets = {}
@@ -1120,7 +1126,7 @@ async def get_positions():
     # Use cached HTX data instead of multiple API calls
     cached = get_cached_htx_data()
     prices = cached['prices']
-    btc_price = prices.get('BTC/USDT', {}).get('price', 0)
+    btc_price = prices.get('BTC/USDD', {}).get('price', 0)
     
     # Get live HTX balance from cache
     live_bal = cached['balance']
@@ -1233,7 +1239,7 @@ async def get_decisions(limit: int = 400):
 async def get_equity():
     """Get equity curve data for chart"""
     prices = fetch_htx_prices()
-    btc_price = prices.get('BTC/USDT', {}).get('price', 0)
+    btc_price = prices.get('BTC/USDD', {}).get('price', 0)
     
     result = {}
     for version in ['V1', 'V2']:
@@ -1372,7 +1378,7 @@ async def force_trade(request: Request):
         direction = 'CLOSE'
     
     prices = fetch_htx_prices()
-    btc_price = prices.get('BTC/USDT', {}).get('price', 0)
+    btc_price = prices.get('BTC/USDD', {}).get('price', 0)
     
     if btc_price == 0:
         return {"error": "Failed to get BTC price"}
@@ -1622,7 +1628,9 @@ async def auto_run_loop():
     while True:
         if auto_run_enabled:
             try:
-                await asyncio.to_thread(run_combined_strategy)
+                # Skip AI reasoning if a position is already open
+                if not has_open_position():
+                    await asyncio.to_thread(run_combined_strategy)
             except Exception as e:
                 print(f"[AUTO] Error in auto-run: {e}")
         await asyncio.sleep(auto_run_interval)
@@ -1666,7 +1674,7 @@ async def run_both_strategies():
     
     if not v1_trade and v1_decision.get('decision') != 'HOLD':
         v1_decision['decision'] = 'HOLD'
-        v1_decision['reasoning'] = f"No trade. Nova Trend waiting. BTC @ ${prices.get('BTC/USDT', {}).get('price', 0):,.2f}."
+        v1_decision['reasoning'] = f"No trade. Nova Trend waiting. BTC @ ${prices.get('BTC/USDD', {}).get('price', 0):,.2f}."
     
     if v1_trade or v1_decision.get('decision') == 'HOLD':
         v1_reasoning = get_ai_reasoning(v1_decision, prices)
@@ -1687,7 +1695,7 @@ async def run_both_strategies():
     
     if not v2_trade and v2_decision.get('decision') != 'HOLD':
         v2_decision['decision'] = 'HOLD'
-        v2_decision['reasoning'] = f"No trade. Nova Range waiting. BTC @ ${prices.get('BTC/USDT', {}).get('price', 0):,.2f}."
+        v2_decision['reasoning'] = f"No trade. Nova Range waiting. BTC @ ${prices.get('BTC/USDD', {}).get('price', 0):,.2f}."
     
     if v2_trade or v2_decision.get('decision') == 'HOLD':
         v2_reasoning = get_ai_reasoning(v2_decision, prices)
@@ -1727,7 +1735,7 @@ async def price_monitor_loop():
         if price_monitor_enabled:
             try:
                 prices = fetch_htx_prices()
-                btc_price = prices.get('BTC/USDT', {}).get('price', 0)
+                btc_price = prices.get('BTC/USDD', {}).get('price', 0)
                 
                 # Check V1 positions
                 v1_closed = check_positions_for_stops("V1", prices)
